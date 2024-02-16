@@ -32,7 +32,7 @@ class RETRIEVINGAI_API AChest : public AActor, public IInteractionInterface
 	UPROPERTY(VisibleAnywhere, Category = ChestElements)
 	USceneComponent* LidPivot;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditDefaultsOnly)
 	UWidgetComponent* InteractionWidgetComponent;
 	
 	

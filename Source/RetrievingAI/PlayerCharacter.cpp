@@ -1,13 +1,17 @@
 #include "PlayerCharacter.h"
 
+#include "Ball.h"
 #include "DrawDebugHelpers.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "InteractionInterface.h"
+#include "PlayerHUD.h"
+#include "Components/CapsuleComponent.h"
 
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -29,6 +33,7 @@ APlayerCharacter::APlayerCharacter()
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	PlayerHUD = nullptr;
 
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
@@ -36,6 +41,13 @@ void APlayerCharacter::BeginPlay()
 		{
 			Subsystem->AddMappingContext(InputMappingContext, 0);
 		}
+	}
+
+	if(!PlayerHudClass) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Player HUD Class is propably not set in BP_PlayerCharacter"));
+	else
+	{
+		PlayerHUD = CreateWidget<UPlayerHUD>(GetWorld(), PlayerHudClass);
+		PlayerHUD->AddToPlayerScreen();
 	}
 }
 
@@ -48,7 +60,7 @@ void APlayerCharacter::Tick(float DeltaTime)
 void APlayerCharacter::ManageLineTrace()
 {
 	FVector Start = ViewCamera->GetComponentLocation();
-	FVector End = Start + ViewCamera->GetForwardVector() * 1200.f;
+	FVector End = Start + ViewCamera->GetForwardVector() * InteractRange;
 	
 	FHitResult OutHit;
 	FCollisionQueryParams Params;
@@ -73,6 +85,17 @@ void APlayerCharacter::ManageLineTrace()
 			LastHittedInteractableActor->SetInteractHintVisibility(false);
 			LastHittedInteractableActor = nullptr;
 		}
+	}
+}
+
+void APlayerCharacter::StopIgnoringBallTimer()
+{
+	CallTracker--;
+	if (CallTracker <=0)
+	{
+		GetMesh()->SetCollisionProfileName("CharacterMesh");
+		GetCapsuleComponent()->SetCollisionProfileName("CharacterMesh");
+		GetWorldTimerManager().ClearTimer(TimerHandle);
 	}
 }
 
@@ -109,6 +132,30 @@ void APlayerCharacter::InteractButtonPressed(const FInputActionValue& Value)
 	}
 }
 
+void APlayerCharacter::ThrowButtonPressed(const FInputActionValue& Value)
+{
+	if (!BallInHand) return;
+	//Ustawiam profil kolizji na ignorowanie piłki, aby przy rzucie nie odbiła się od gracza
+	GetMesh()->SetCollisionProfileName("IgnoreBall");
+	GetCapsuleComponent()->SetCollisionProfileName("IgnoreBall");
+	
+	//Gdy timer dobiegnie końca, character będzie ponownie blokować piłki
+	CallTracker = StopIgnoringBallRemainingCalls;
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &APlayerCharacter::StopIgnoringBallTimer, 0.3f, true, 0.f);
+
+	//Ustawiam kierunek rzutu względem LookAtRotation z hand socketu a forward vectorem kamery
+	FVector Start = GetMesh()->GetSocketLocation("HandSocket");
+	FVector End = ViewCamera->GetForwardVector() * 9999;
+	
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	Params.AddIgnoredActor(BallInHand);
+	FVector Direction = UKismetMathLibrary::FindLookAtRotation(Start, End).Vector();
+	BallInHand->Throw(ThrowStrength, Direction);
+	PlayerHUD->UpdateHUD(false);
+	BallInHand = nullptr;
+}
+
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -118,6 +165,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Look);
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Triggered, this, &APlayerCharacter::InteractButtonPressed);
+		EnhancedInputComponent->BindAction(ThrowAction, ETriggerEvent::Triggered, this, &APlayerCharacter::ThrowButtonPressed);
 	}
 }
 

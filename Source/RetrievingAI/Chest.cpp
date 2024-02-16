@@ -19,6 +19,8 @@ AChest::AChest()
 
 	InteractionWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("InteractionWidget"));
 	InteractionWidgetComponent->SetupAttachment(RootComponent);
+	InteractionWidgetComponent->SetDrawAtDesiredSize(true);
+	InteractionWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
 }
 
 void AChest::BeginPlay()

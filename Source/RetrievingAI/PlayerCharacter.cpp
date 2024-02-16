@@ -1,5 +1,4 @@
 #include "PlayerCharacter.h"
-
 #include "Ball.h"
 #include "DrawDebugHelpers.h"
 #include "Camera/CameraComponent.h"
@@ -9,31 +8,36 @@
 #include "InteractionInterface.h"
 #include "PlayerHUD.h"
 #include "Components/CapsuleComponent.h"
-
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "NiagaraComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "NiagaraDataInterfaceArrayFunctionLibrary.h"
 
 APlayerCharacter::APlayerCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-	SpringArmComponent->SetupAttachment(GetRootComponent());
+	SpringArmComponent->SetupAttachment(GetCapsuleComponent());
 	SpringArmComponent->TargetArmLength = 500.f;
 	SpringArmComponent->bUsePawnControlRotation = true;
 
 	ViewCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("ViewCamera"));
-	ViewCamera->SetupAttachment(SpringArmComponent, USpringArmComponent::SocketName);
+	ViewCamera->SetupAttachment(SpringArmComponent);
 	ViewCamera->bUsePawnControlRotation = false;
 
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
+
+	NiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("NiagaraComponent"));
 }
 
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	PlayerHUD = nullptr;
+	//Deaktywacja niagary zapobiega widoczności trajektorii po wysatrtowaniu gry
+	NiagaraComponent->DeactivateImmediate();
 
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
@@ -49,19 +53,44 @@ void APlayerCharacter::BeginPlay()
 		PlayerHUD = CreateWidget<UPlayerHUD>(GetWorld(), PlayerHudClass);
 		PlayerHUD->AddToPlayerScreen();
 	}
+	SpringArmComponent->SetRelativeLocation(FVector(0,0,100));
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	ThrowEnd = ViewCamera->GetForwardVector() * 9999;
 	ManageLineTrace();
+	ManageThrowTrajectory();
 }
 
+void APlayerCharacter::ManageThrowTrajectory()
+{
+	if(BallInHand)
+	{
+		NiagaraComponent->Activate();
+		
+		FVector Start = GetMesh()->GetSocketLocation("HandSocket");
+		FVector Direction = UKismetMathLibrary::FindLookAtRotation(Start, ThrowEnd).Vector();
+		
+		FPredictProjectilePathParams Params;
+		FPredictProjectilePathResult PathResult;
+		Params.StartLocation = Start;
+		Params.LaunchVelocity = Direction * ThrowStrength;
+		
+		UGameplayStatics::PredictProjectilePath(GetWorld(), Params, PathResult);
+		TArray<FVector> OutPathPositions;
+		for (auto PathPoint : PathResult.PathData)
+		{
+			OutPathPositions.Add(PathPoint.Location);
+		}
+		UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(NiagaraComponent, "User.Positions", OutPathPositions);
+	}
+}
 void APlayerCharacter::ManageLineTrace()
 {
 	FVector Start = ViewCamera->GetComponentLocation();
 	FVector End = Start + ViewCamera->GetForwardVector() * InteractRange;
-	
 	FHitResult OutHit;
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(this);
@@ -74,20 +103,19 @@ void APlayerCharacter::ManageLineTrace()
 		//Wyświetlenie indykatora interakcji po trafieniu tracem aktora, który implementuje interfejs
 		if (OutHit.Actor->Implements<UInteractionInterface>())
 		{
-			LastHittedInteractableActor = Cast<IInteractionInterface>(OutHit.Actor);
-			LastHittedInteractableActor->SetInteractHintVisibility(true);
+			LastHitInteractableActor = Cast<IInteractionInterface>(OutHit.Actor);
+			LastHitInteractableActor->SetInteractHintVisibility(true);
 		}
-		/*Jeżeli trace już nie trafia w pożądanego aktora, a w pamięci jest zmienna LastHittedInteractableActor,
+		/*Jeżeli trace już nie trafia w pożądanego aktora, a w pamięci jest zmienna LastHitInteractableActor,
 		 *oznacza to że chwilę wcześniej użytkownik mierzył w skrzynię, ale już tego nie robi,
 		 *więc można wyłączyć indykator interakcji temu aktorowi oraz ustawić zmienną na nullptr*/
-		else if (LastHittedInteractableActor)
+		else if (LastHitInteractableActor)
 		{
-			LastHittedInteractableActor->SetInteractHintVisibility(false);
-			LastHittedInteractableActor = nullptr;
+			LastHitInteractableActor->SetInteractHintVisibility(false);
+			LastHitInteractableActor = nullptr;
 		}
 	}
 }
-
 void APlayerCharacter::StopIgnoringBallTimer()
 {
 	CallTracker--;
@@ -98,8 +126,6 @@ void APlayerCharacter::StopIgnoringBallTimer()
 		GetWorldTimerManager().ClearTimer(TimerHandle);
 	}
 }
-
-
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
 	const FVector2D MovementVector = Value.Get<FVector2D>();
@@ -112,7 +138,6 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 		AddMovementInput(RightDirection, MovementVector.X);
 	}
 }
-
 void APlayerCharacter::Look(const FInputActionValue& Value)
 {
 	const FVector2D LookAxisVector =  Value.Get<FVector2D>();
@@ -123,15 +148,13 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 	}
 }
-
 void APlayerCharacter::InteractButtonPressed(const FInputActionValue& Value)
 {
-	if (LastHittedInteractableActor)
+	if (LastHitInteractableActor)
 	{
-		LastHittedInteractableActor->Interaction();
+		LastHitInteractableActor->Interaction();
 	}
 }
-
 void APlayerCharacter::ThrowButtonPressed(const FInputActionValue& Value)
 {
 	if (!BallInHand) return;
@@ -144,16 +167,17 @@ void APlayerCharacter::ThrowButtonPressed(const FInputActionValue& Value)
 	GetWorldTimerManager().SetTimer(TimerHandle, this, &APlayerCharacter::StopIgnoringBallTimer, 0.3f, true, 0.f);
 
 	//Ustawiam kierunek rzutu względem LookAtRotation z hand socketu a forward vectorem kamery
-	FVector Start = GetMesh()->GetSocketLocation("HandSocket");
-	FVector End = ViewCamera->GetForwardVector() * 9999;
+	//StartThrowPosition= GetMesh()->GetSocketLocation("HandSocket");
 	
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(this);
 	Params.AddIgnoredActor(BallInHand);
-	FVector Direction = UKismetMathLibrary::FindLookAtRotation(Start, End).Vector();
+	FVector Start = GetMesh()->GetSocketLocation("HandSocket");
+	FVector Direction = UKismetMathLibrary::FindLookAtRotation(Start, ThrowEnd).Vector();
 	BallInHand->Throw(ThrowStrength, Direction);
 	PlayerHUD->UpdateHUD(false);
 	BallInHand = nullptr;
+	NiagaraComponent->DeactivateImmediate();
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

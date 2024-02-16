@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Ball.h"
 
 #include "InteractionWidget.h"
@@ -10,11 +7,8 @@
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 
-
-// Sets default values
 ABall::ABall()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	BallMesh = CreateDefaultSubobject<UStaticMeshComponent>("BallMesh");
 	RootComponent = BallMesh;
@@ -29,14 +23,12 @@ ABall::ABall()
 
 }
 
-// Called when the game starts or when spawned
 void ABall::BeginPlay()
 {
 	Super::BeginPlay();
 	BallMesh->OnComponentHit.AddDynamic(this, &ABall::OnComponentHit);
 }
 
-// Called every frame
 void ABall::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -44,6 +36,7 @@ void ABall::Tick(float DeltaTime)
 
 void ABall::Interaction()
 {
+	//Gdy interaction hint nie jest zablokowany, wyłączam fizykę na BallMeshu a następnie attachuje piłkę do sockecie w prawej ręce mesha gracza
 	if (bInteractionHintBlocked) return;
 	IInteractionInterface::Interaction();
 	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
@@ -75,6 +68,7 @@ void ABall::SetInteractHintVisibility(bool bIsVisible)
 
 void ABall::Throw(float ThrowStrength, FVector Direction)
 {
+	//Wyłączenie fizyki, aby piłka odczepiła się od socketa oraz by oczywiście działała fizyka
 	BallMesh->SetSimulatePhysics(true);
 	BallMesh->SetPhysicsLinearVelocity(Direction * ThrowStrength);
 	SetInteractHintVisibility(false);

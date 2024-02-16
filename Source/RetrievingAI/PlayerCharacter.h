@@ -10,19 +10,25 @@ class UCameraComponent;
 class IInteractionInterface;
 class ABall;
 class UPlayerHUD;
+class UNiagaraComponent;
+class UInputMappingContext;
+class UInputAction;
 
 UCLASS()
 class RETRIEVINGAI_API APlayerCharacter : public ACharacter
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(VisibleAnywhere, Category = Camera)
+	UPROPERTY(EditDefaultsOnly)
 	USpringArmComponent* SpringArmComponent;
-
-	UPROPERTY(VisibleAnywhere, Category = Camera)
+	
+	UPROPERTY(EditDefaultsOnly)
 	UCameraComponent* ViewCamera;
-
-	IInteractionInterface* LastHittedInteractableActor = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly)
+	UNiagaraComponent* NiagaraComponent;
+	
+	IInteractionInterface* LastHitInteractableActor = nullptr;
 
 public:
 	APlayerCharacter();
@@ -36,16 +42,13 @@ public:
 
 	ABall* BallInHand;
 	UPlayerHUD* PlayerHUD;
-
-protected:
-	virtual void BeginPlay() override;
-
+	
 	//Input
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Enchanced Input")
-	class UInputMappingContext* InputMappingContext;
+	UInputMappingContext* InputMappingContext;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Enchanced Input")
-	class UInputAction* JumpAction;
+	UInputAction* JumpAction;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Enchanced Input")
 	UInputAction* MoveAction;
@@ -59,24 +62,28 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Enchanced Input")
 	UInputAction* ThrowAction;
 
+protected:
+	virtual void BeginPlay() override;
+
 private:
 	UPROPERTY(EditDefaultsOnly, Category = Interaction)
 	float InteractRange = 1200.f;
-
+	
 	UPROPERTY(EditDefaultsOnly, Category = ThrowingBall)
 	float ThrowStrength = 1000.f;
 	
-	void ManageLineTrace();
-
 	UPROPERTY(EditAnywhere, Category = ThrowingBall)
 	int32 StopIgnoringBallRemainingCalls = 1;
-	int32 CallTracker;
-	FTimerHandle TimerHandle;
-
+	
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> PlayerHudClass;
 	
+	FVector ThrowEnd;
+	int32 CallTracker;
+	FTimerHandle TimerHandle;
 	
+	void ManageThrowTrajectory();
+	void ManageLineTrace();
 	void StopIgnoringBallTimer();
 	
 };

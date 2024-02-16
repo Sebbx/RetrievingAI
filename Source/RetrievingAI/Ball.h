@@ -11,6 +11,7 @@ UCLASS()
 class RETRIEVINGAI_API ABall : public AActor, public IInteractionInterface
 {
 	GENERATED_BODY()
+	
 	UPROPERTY(EditDefaultsOnly)
 	UStaticMeshComponent* BallMesh;
 
@@ -27,14 +28,11 @@ public:
 	virtual void SetInteractHintVisibility(bool bIsVisible) override;
 
 	void Throw(float ThrowStrength, FVector Direction);
-
-	bool bIsThrown = false;
-	bool bInteractionHintBlocked = false;
-
+	
 protected:
 	virtual void BeginPlay() override;
 
 private:
-
+	bool bInteractionHintBlocked = false;
 	bool bBallThrown = false;
 };

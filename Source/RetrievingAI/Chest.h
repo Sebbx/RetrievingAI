@@ -55,10 +55,22 @@ private:
 	UPROPERTY(EditAnywhere, Category = OpeningSystem)
 	float OpenRotationSpeed = 300.f;
 
-	EChestState CurrentChestState = EChestState::ECS_Closed;
-
-	float TargetRotation;
+	UPROPERTY(EditAnywhere, Category = BallDrop)
+	int32 BallDropDelayTimerRemainingCalls = 2;
 	
+	UPROPERTY(EditAnywhere, Category = BallDrop)
+	int32 CloseLidDelayTimerRemainingCalls = 4;
+	
+	UPROPERTY(EditDefaultsOnly, Category = BallDrop)
+	TSubclassOf<ABall> BallBPClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = BallDrop)
+	float BallDropStrength = 1000.f;
+	
+	int32 CallTracker;
+	FTimerHandle TimerHandle;
+	EChestState CurrentChestState = EChestState::ECS_Closed;
+	float TargetRotation;
 	bool bTestBoolRotation = false;
 	bool bTargetValuesSet = false;
 	bool bInteractionHintBlocked = false;
@@ -66,25 +78,8 @@ private:
 	
 	void ManagePivotRotation(float DeltaTime);
 	void DropBall();
-
-	UPROPERTY(EditAnywhere, Category = BallDrop)
-	int32 BallDropDelayTimerRemainingCalls = 2;
-	UPROPERTY(EditAnywhere, Category = BallDrop)
-	int32 CloseLidDelayTimerRemainingCalls = 4;
-	int32 CallTracker;
-	FTimerHandle TimerHandle;
-
 	void BallDropDelayTimer();
 	void CloseLidDelayTimer();
-
-	UPROPERTY(EditDefaultsOnly, Category = BallDrop)
-	TSubclassOf<ABall> BallBPClass;
-
-	UPROPERTY(EditDefaultsOnly, Category = BallDrop)
-	float BallDropStrength = 1000.f;
 	
-	UPROPERTY(EditDefaultsOnly, Category = BallDrop)
-	FVector BallDropDirection;
-
 	ABall* DroppedBall;
 };

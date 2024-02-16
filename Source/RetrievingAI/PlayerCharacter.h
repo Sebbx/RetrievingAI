@@ -9,6 +9,14 @@ UCLASS()
 class RETRIEVINGAI_API APlayerCharacter : public ACharacter
 {
 	GENERATED_BODY()
+	
+	UPROPERTY(VisibleAnywhere, Category = Camera)
+	class USpringArmComponent* SpringArmComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = Camera)
+	class UCameraComponent* ViewCamera;
+
+	class IInteractionInterface* LastHittedInteractableActor = nullptr;
 
 public:
 	APlayerCharacter();
@@ -39,9 +47,6 @@ protected:
 	UInputAction* InteractAction;
 	
 private:
-	UPROPERTY(VisibleAnywhere, Category = Camera)
-	class USpringArmComponent* SpringArmComponent;
 
-	UPROPERTY(VisibleAnywhere, Category = Camera)
-	class UCameraComponent* ViewCamera;
+	void ManageLineTrace();
 };

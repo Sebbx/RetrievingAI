@@ -54,6 +54,14 @@ void APlayerCharacter::BeginPlay()
 		PlayerHUD->AddToPlayerScreen();
 	}
 	SpringArmComponent->SetRelativeLocation(FVector(0,0,100));
+
+	//Szukam platformy do spawnienia AI z odpowiednim tagiem i zapisuję jej lokalizację
+	TArray<AActor*> Actors;
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), "Player1AIPlatform", Actors);
+	for (auto Actor : Actors)
+	{
+		AISpawnLocation = Actor->GetActorLocation();
+	}
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
@@ -174,7 +182,7 @@ void APlayerCharacter::ThrowButtonPressed(const FInputActionValue& Value)
 	Params.AddIgnoredActor(BallInHand);
 	FVector Start = GetMesh()->GetSocketLocation("HandSocket");
 	FVector Direction = UKismetMathLibrary::FindLookAtRotation(Start, ThrowEnd).Vector();
-	BallInHand->Throw(ThrowStrength, Direction);
+	BallInHand->Throw(ThrowStrength, Direction, this, AISpawnLocation);
 	PlayerHUD->UpdateHUD(false);
 	BallInHand = nullptr;
 	NiagaraComponent->DeactivateImmediate();

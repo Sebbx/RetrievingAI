@@ -13,6 +13,7 @@ class UPlayerHUD;
 class UNiagaraComponent;
 class UInputMappingContext;
 class UInputAction;
+class UBehaviorTree;
 
 UCLASS()
 class RETRIEVINGAI_API APlayerCharacter : public ACharacter
@@ -42,6 +43,9 @@ public:
 
 	ABall* BallInHand;
 	UPlayerHUD* PlayerHUD;
+	
+	UPROPERTY(EditAnywhere, Category = AIRetriever)
+	UBehaviorTree* BehaviorTree;
 	
 	//Input
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Enchanced Input")
@@ -85,5 +89,7 @@ private:
 	void ManageThrowTrajectory();
 	void ManageLineTrace();
 	void StopIgnoringBallTimer();
+	
+	FVector AISpawnLocation = FVector::ZeroVector;
 	
 };

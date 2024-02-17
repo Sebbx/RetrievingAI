@@ -21,12 +21,14 @@ AChest::AChest()
 	InteractionWidgetComponent->SetupAttachment(RootComponent);
 	InteractionWidgetComponent->SetDrawAtDesiredSize(true);
 	InteractionWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+
+	bReplicates = true;
+	bAlwaysRelevant = true;
 }
 
 void AChest::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 void AChest::Tick(float DeltaTime)
@@ -84,7 +86,6 @@ void AChest::ManagePivotRotation(float DeltaTime)
 					bTestBoolRotation = false;
 				}
 				bTargetValuesSet = false;
-				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("AA"));
 			}
 		}
 	}
@@ -100,7 +101,7 @@ void AChest::DropBall()
 	//Uzyskuję tutaj wektor zwrócony do góry i delikatnie w przód poprzez 4-krotne podzielenie sumy dwóch wektorów
 	//Podzielenie przez 2 sumy dwóch wektorów skutkuje uzyskaniem wektorem między sumowanymi wektorami, więc doszedłem do wniosku,
 	//że podzielenie przez większą liczbę da mi pożądany kąt wyrzutu piłki skierowany bardziej ku górze
-	DroppedBall->Throw(BallDropStrength, this->GetActorUpVector() + this->GetActorForwardVector() / 4 );
+	DroppedBall->Drop(BallDropStrength, this->GetActorUpVector() + this->GetActorForwardVector() / 4 );
 }
 
 void AChest::BallDropDelayTimer()
@@ -136,7 +137,6 @@ void AChest::Interaction()
 	if (!bInteractionHintBlocked)
 	{
 		IInteractionInterface::Interaction();
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("Interaction"));
 		bTestBoolRotation = true;
 		SetInteractHintVisibility(false);
 		bInteractionHintBlocked = true;

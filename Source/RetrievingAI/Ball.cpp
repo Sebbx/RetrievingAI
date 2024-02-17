@@ -1,8 +1,10 @@
 #include "Ball.h"
-
+#include "AICharacter.h"
 #include "InteractionWidget.h"
 #include "PlayerCharacter.h"
 #include "PlayerHUD.h"
+#include "BehaviorTree/BehaviorTree.h"
+#include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
@@ -50,11 +52,14 @@ void ABall::Interaction()
 void ABall::OnComponentHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 	FVector NormalImpulse, const FHitResult& Hit)
 {
-	//Gdy piłka w coś uderzy, można ponownie wejść z nią w interakcję
 	if (!bBallThrown) return;
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("Ball Landed"));
+	//Gdy piłka w coś uderzy, można ponownie wejść z nią w interakcję
 	bBallThrown = false;
 	bInteractionHintBlocked = false;
+
+	if(BallThrower) SpawnAI();
+	
+	
 }
 void ABall::SetInteractHintVisibility(bool bIsVisible)
 {
@@ -66,7 +71,7 @@ void ABall::SetInteractHintVisibility(bool bIsVisible)
 	}
 }
 
-void ABall::Throw(float ThrowStrength, FVector Direction)
+void ABall::Throw(float ThrowStrength, FVector Direction, APlayerCharacter* Thrower, FVector AISpawnLocation)
 {
 	//Wyłączenie fizyki, aby piłka odczepiła się od socketa oraz by oczywiście działała fizyka
 	BallMesh->SetSimulatePhysics(true);
@@ -74,5 +79,38 @@ void ABall::Throw(float ThrowStrength, FVector Direction)
 	SetInteractHintVisibility(false);
 	bInteractionHintBlocked = true;
 	bBallThrown = true;
+
+	BallThrower = Thrower;
+	AISpawnVector = AISpawnLocation;
+}
+
+void ABall::Drop(float DropStrength, FVector Direction)
+{
+	BallMesh->SetSimulatePhysics(true);
+	BallMesh->SetPhysicsLinearVelocity(Direction * DropStrength);
+	SetInteractHintVisibility(false);
+	bInteractionHintBlocked = true;
+	bBallThrown = true;
+}
+
+void ABall::SpawnAI()
+{
+	if(!AICharacterClass) return;
+	UBehaviorTree* BB = NewObject<UBehaviorTree>();
+	AAICharacter* AIRetriever = Cast<AAICharacter>(UAIBlueprintHelperLibrary::SpawnAIFromClass(
+		GetWorld(),
+		AICharacterClass,
+		BallThrower->BehaviorTree,
+		AISpawnVector,
+		FRotator::ZeroRotator,
+		false,
+		BallThrower));
+	AIRetriever->SetAICValues(this, BallThrower->BehaviorTree, BallThrower);
+	bInteractionHintBlocked = true;
+}
+
+void ABall::RemoveBallThrower()
+{
+	BallThrower = nullptr;
 }
 

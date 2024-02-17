@@ -5,6 +5,8 @@
 #include "GameFramework/Actor.h"
 #include "Ball.generated.h"
 
+class AAICharacter;
+class APlayerCharacter;
 class UStaticMeshComponent;
 class UWidgetComponent;
 UCLASS()
@@ -12,8 +14,6 @@ class RETRIEVINGAI_API ABall : public AActor, public IInteractionInterface
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(EditDefaultsOnly)
-	UStaticMeshComponent* BallMesh;
 
 	UPROPERTY(EditDefaultsOnly)
 	UWidgetComponent* InteractionWidgetComponent;
@@ -26,13 +26,25 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void Interaction() override;
 	virtual void SetInteractHintVisibility(bool bIsVisible) override;
+	
+	bool bInteractionHintBlocked = false;
+	bool bBallThrown = false;
+	UPROPERTY(EditDefaultsOnly)
+	UStaticMeshComponent* BallMesh;
 
-	void Throw(float ThrowStrength, FVector Direction);
+	void Throw(float ThrowStrength, FVector Direction, APlayerCharacter* Thrower, FVector AISpawnLocation);
+	void Drop(float DropStrength, FVector Direction);
+	void SpawnAI();
+
+	void RemoveBallThrower();
 	
 protected:
 	virtual void BeginPlay() override;
 
 private:
-	bool bInteractionHintBlocked = false;
-	bool bBallThrown = false;
+	UPROPERTY(EditAnywhere, Category = "AI")
+	TSubclassOf<AAICharacter> AICharacterClass;
+	
+	APlayerCharacter* BallThrower;
+	FVector AISpawnVector;
 };

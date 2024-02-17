@@ -3,13 +3,15 @@
 #include "CoreMinimal.h"
 #include "InteractionInterface.h"
 #include "GameFramework/Actor.h"
+#include "Engine/Engine.h"
 #include "Chest.generated.h"
 
 class ABall;
 class UStaticMeshComponent;
 class UWidgetComponent;
 class ABall;
-	
+
+UENUM()
 enum class EChestState : uint8
 {
 	ECS_Open,
@@ -46,6 +48,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	
+	EChestState CurrentChestState = EChestState::ECS_Closed;
 
 private:
 
@@ -69,7 +73,8 @@ private:
 	
 	int32 CallTracker;
 	FTimerHandle TimerHandle;
-	EChestState CurrentChestState = EChestState::ECS_Closed;
+	
+	
 	float TargetRotation;
 	bool bTestBoolRotation = false;
 	bool bTargetValuesSet = false;

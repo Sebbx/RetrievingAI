@@ -96,7 +96,6 @@ void ABall::Drop(float DropStrength, FVector Direction)
 void ABall::SpawnAI()
 {
 	if(!AICharacterClass) return;
-	UBehaviorTree* BB = NewObject<UBehaviorTree>();
 	AAICharacter* AIRetriever = Cast<AAICharacter>(UAIBlueprintHelperLibrary::SpawnAIFromClass(
 		GetWorld(),
 		AICharacterClass,
